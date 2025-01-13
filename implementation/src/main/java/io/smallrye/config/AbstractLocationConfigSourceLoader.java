@@ -14,6 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -121,9 +123,9 @@ public abstract class AbstractLocationConfigSourceLoader {
     protected List<ConfigSource> tryFileSystem(final URI uri, final int ordinal) {
         final List<ConfigSource> configSources = new ArrayList<>();
         final Path urlPath = uri.getScheme() != null ? Paths.get(uri) : Paths.get(uri.getPath());
-        if (Files.isRegularFile(urlPath)) {
+        if (AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Files.isRegularFile(urlPath))) {
             consumeAsPath(toURL(urlPath.toUri()), new ConfigSourcePathConsumer(ordinal, configSources));
-        } else if (Files.isDirectory(urlPath)) {
+        } else if (AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Files.isDirectory(urlPath))) {
             try (DirectoryStream<Path> paths = Files.newDirectoryStream(urlPath, this::validExtension)) {
                 for (Path path : paths) {
                     configSources.add(loadConfigSource(path.toUri(), ordinal));
@@ -131,7 +133,9 @@ public abstract class AbstractLocationConfigSourceLoader {
             } catch (IOException e) {
                 throw ConfigMessages.msg.failedToLoadResource(e, uri.toString());
             }
-        } else if ("file".equals(uri.getScheme()) && Files.notExists(urlPath) && failOnMissingFile()) {
+        } else if ("file".equals(uri.getScheme())
+                && AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Files.notExists(urlPath))
+                && failOnMissingFile()) {
             throw ConfigMessages.msg.failedToLoadResource(new FileNotFoundException(uri.toString()), uri.toString());
         }
         return configSources;

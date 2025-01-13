@@ -5,6 +5,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List;
 
 import org.eclipse.microprofile.config.spi.ConfigSource;
@@ -16,7 +18,7 @@ public class DotEnvConfigSourceProvider extends AbstractLocationConfigSourceLoad
     private final String location;
 
     public DotEnvConfigSourceProvider() {
-        this(getDotEnvFile(".env"));
+        this(getDotEnvFile());
     }
 
     public DotEnvConfigSourceProvider(final String location) {
@@ -51,8 +53,10 @@ public class DotEnvConfigSourceProvider extends AbstractLocationConfigSourceLoad
         return new DotEnvConfigSourceProvider(location).getConfigSources(classLoader);
     }
 
-    private static String getDotEnvFile(final String filename) {
-        Path dotEnvFile = Paths.get(System.getProperty("user.dir"), filename);
-        return Files.isDirectory(dotEnvFile) ? null : dotEnvFile.toUri().toString();
+    private static String getDotEnvFile() {
+        String userDir = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.dir"));
+        Path dotEnvFile = Paths.get(userDir, ".env");
+        Boolean isDirectory = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Files.isDirectory(dotEnvFile));
+        return isDirectory ? null : dotEnvFile.toUri().toString();
     }
 }

@@ -31,6 +31,8 @@ import static io.smallrye.config.SmallRyeConfig.SMALLRYE_CONFIG_SECRET_HANDLERS;
 
 import java.lang.reflect.Type;
 import java.nio.file.Paths;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -212,8 +214,9 @@ public class SmallRyeConfigBuilder implements ConfigBuilder {
 
     protected List<ConfigSource> getPropertiesSources() {
         List<ConfigSource> sources = new ArrayList<>();
+        String userDir = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.dir"));
         sources.addAll(
-                inFileSystem(Paths.get(System.getProperty("user.dir"), "config", "application.properties").toUri().toString(),
+                inFileSystem(Paths.get(userDir, "config", "application.properties").toUri().toString(),
                         260, classLoader));
         sources.addAll(inClassPath("application.properties", 250, classLoader));
         sources.addAll(inClassPath("META-INF/microprofile-config.properties", 100, classLoader));
@@ -937,7 +940,7 @@ public class SmallRyeConfigBuilder implements ConfigBuilder {
             this.factory = factory;
         }
 
-        io.smallrye.config.SecretKeysHandler getSecretKeysHandler(ConfigSourceContext context) {
+        SecretKeysHandler getSecretKeysHandler(ConfigSourceContext context) {
             return factory.getSecretKeysHandler(context);
         }
 
